@@ -5,6 +5,8 @@ target
 *.iws
 .checkstyle
 .settings
+*.releaseBackup
+release.properties
 
 # Ignore everything in .idea, but not the folder itself
 .idea/*
