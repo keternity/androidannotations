@@ -30,7 +30,7 @@ public class CustomFrameLayoutTest {
 	@Test
 	public void shouldHaveLayoutAfterCreate() {
 		EmptyActivityWithoutLayout activity = Robolectric.buildActivity(EmptyActivityWithoutLayout_.class).create().get();
-		CustomFrameLayout component = CustomFrameLayout_.build(activity, 0);
+		CustomFrameLayout component = CustomFrameLayout_.build(activity);
 		assertThat(component.subtitle).isNotNull();
 		assertThat(component.tv).isNotNull();
 	}

@@ -28,7 +28,7 @@ public class CustomFrameLayoutActivity extends Activity {
 
 	@AfterViews
 	public void afterViews() {
-		layout = CustomFrameLayout_.build(this, 2);
+		layout = CustomFrameLayout_.build(this);
 		layout.tv.setText("Plop");
 	}
 

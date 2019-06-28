@@ -15,6 +15,10 @@
  */
 package org.androidannotations.internal.x2c.javapoet;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.androidannotations.internal.x2c.javapoet.Util.checkArgument;
+import static org.androidannotations.internal.x2c.javapoet.Util.checkNotNull;
+
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
@@ -37,270 +41,292 @@ import javax.tools.JavaFileObject;
 import javax.tools.JavaFileObject.Kind;
 import javax.tools.SimpleJavaFileObject;
 
-import static com.eternity.android.annotation.extra.plugin.x2c.javapoet.Util.checkArgument;
-import static com.eternity.android.annotation.extra.plugin.x2c.javapoet.Util.checkNotNull;
-import static java.nio.charset.StandardCharsets.UTF_8;
-
 /** A Java file containing a single top level class. */
 public final class JavaFile {
-  private static final Appendable NULL_APPENDABLE = new Appendable() {
-    @Override public Appendable append(CharSequence charSequence) {
-      return this;
-    }
-    @Override public Appendable append(CharSequence charSequence, int start, int end) {
-      return this;
-    }
-    @Override public Appendable append(char c) {
-      return this;
-    }
-  };
+	private static final Appendable NULL_APPENDABLE = new Appendable() {
+		@Override
+		public Appendable append(CharSequence charSequence) {
+			return this;
+		}
 
-  public final CodeBlock fileComment;
-  public final String packageName;
-  public final TypeSpec typeSpec;
-  public final boolean skipJavaLangImports;
-  private final Set<String> staticImports;
-  private Set<String> imports;
-  private final String indent;
+		@Override
+		public Appendable append(CharSequence charSequence, int start, int end) {
+			return this;
+		}
 
-  private JavaFile(Builder builder) {
-    this.fileComment = builder.fileComment.build();
-    this.packageName = builder.packageName;
-    this.typeSpec = builder.typeSpec;
-    this.skipJavaLangImports = builder.skipJavaLangImports;
-    this.staticImports = Util.immutableSet(builder.staticImports);
-    this.imports = builder.imports;
-    this.indent = builder.indent;
-  }
+		@Override
+		public Appendable append(char c) {
+			return this;
+		}
+	};
 
-  public void writeTo(Appendable out) throws IOException {
-    // First pass: emit the entire class, just to collect the types we'll need to import.
-    CodeWriter importsCollector = new CodeWriter(NULL_APPENDABLE, indent, staticImports);
-    emit(importsCollector);
-    Map<String, ClassName> suggestedImports = importsCollector.suggestedImports();
+	public final CodeBlock fileComment;
+	public final String packageName;
+	public final TypeSpec typeSpec;
+	public final boolean skipJavaLangImports;
+	private final Set<String> staticImports;
+	private Set<String> imports;
+	private final String indent;
 
-    // Second pass: write the code, taking advantage of the imports.
-    CodeWriter codeWriter = new CodeWriter(out, indent, suggestedImports, staticImports);
-    emit(codeWriter);
-  }
+	private JavaFile(Builder builder) {
+		this.fileComment = builder.fileComment.build();
+		this.packageName = builder.packageName;
+		this.typeSpec = builder.typeSpec;
+		this.skipJavaLangImports = builder.skipJavaLangImports;
+		this.staticImports = Util.immutableSet(builder.staticImports);
+		this.imports = builder.imports;
+		this.indent = builder.indent;
+	}
 
-  /** Writes this to {@code directory} as UTF-8 using the standard directory structure. */
-  public void writeTo(Path directory) throws IOException {
-    checkArgument(Files.notExists(directory) || Files.isDirectory(directory),
-        "path %s exists but is not a directory.", directory);
-    Path outputDirectory = directory;
-    if (!packageName.isEmpty()) {
-      for (String packageComponent : packageName.split("\\.")) {
-        outputDirectory = outputDirectory.resolve(packageComponent);
-      }
-      Files.createDirectories(outputDirectory);
-    }
+	public void writeTo(Appendable out) throws IOException {
+		// First pass: emit the entire class, just to collect the types we'll need to
+		// import.
+		CodeWriter importsCollector = new CodeWriter(NULL_APPENDABLE, indent, staticImports);
+		emit(importsCollector);
+		Map<String, ClassName> suggestedImports = importsCollector.suggestedImports();
 
-    Path outputPath = outputDirectory.resolve(typeSpec.name + ".java");
-    try (Writer writer = new OutputStreamWriter(Files.newOutputStream(outputPath), UTF_8)) {
-      writeTo(writer);
-    }
-  }
+		// Second pass: write the code, taking advantage of the imports.
+		CodeWriter codeWriter = new CodeWriter(out, indent, suggestedImports, staticImports);
+		emit(codeWriter);
+	}
 
-  /** Writes this to {@code directory} as UTF-8 using the standard directory structure. */
-  public void writeTo(File directory) throws IOException {
-    writeTo(directory.toPath());
-  }
+	/**
+	 * Writes this to {@code directory} as UTF-8 using the standard directory
+	 * structure.
+	 */
+	public void writeTo(Path directory) throws IOException {
+		checkArgument(Files.notExists(directory) || Files.isDirectory(directory), "path %s exists but is not a directory.", directory);
+		Path outputDirectory = directory;
+		if (!packageName.isEmpty()) {
+			for (String packageComponent : packageName.split("\\.")) {
+				outputDirectory = outputDirectory.resolve(packageComponent);
+			}
+			Files.createDirectories(outputDirectory);
+		}
 
-  /** Writes this to {@code filer}. */
-  public void writeTo(Filer filer) throws IOException {
-    String fileName = packageName.isEmpty()
-        ? typeSpec.name
-        : packageName + "." + typeSpec.name;
-    List<Element> originatingElements = typeSpec.originatingElements;
-    JavaFileObject filerSourceFile = filer.createSourceFile(fileName,
-        originatingElements.toArray(new Element[originatingElements.size()]));
-    try (Writer writer = filerSourceFile.openWriter()) {
-      writeTo(writer);
-    } catch (Exception e) {
-      try {
-        filerSourceFile.delete();
-      } catch (Exception ignored) {
-      }
-      throw e;
-    }
-  }
+		Path outputPath = outputDirectory.resolve(typeSpec.name + ".java");
+		try (Writer writer = new OutputStreamWriter(Files.newOutputStream(outputPath), UTF_8)) {
+			writeTo(writer);
+		}
+	}
 
-  private void emit(CodeWriter codeWriter) throws IOException {
-    codeWriter.pushPackage(packageName);
+	/**
+	 * Writes this to {@code directory} as UTF-8 using the standard directory
+	 * structure.
+	 */
+	public void writeTo(File directory) throws IOException {
+		writeTo(directory.toPath());
+	}
 
-    if (!fileComment.isEmpty()) {
-      codeWriter.emitComment(fileComment);
-    }
+	/** Writes this to {@code filer}. */
+	public void writeTo(Filer filer) throws IOException {
+		String fileName = packageName.isEmpty() ? typeSpec.name : packageName + "." + typeSpec.name;
+		List<Element> originatingElements = typeSpec.originatingElements;
+		JavaFileObject filerSourceFile = filer.createSourceFile(fileName, originatingElements.toArray(new Element[originatingElements.size()]));
+		try (Writer writer = filerSourceFile.openWriter()) {
+			writeTo(writer);
+		} catch (Exception e) {
+			try {
+				filerSourceFile.delete();
+			} catch (Exception ignored) {
+				ignored.printStackTrace();
+			}
+			throw e;
+		}
+	}
 
-    if (!packageName.isEmpty()) {
-      codeWriter.emit("package $L;\n", packageName);
-      codeWriter.emit("\n");
-    }
+	private void emit(CodeWriter codeWriter) throws IOException {
+		codeWriter.pushPackage(packageName);
 
-    if (!staticImports.isEmpty()) {
-      for (String signature : staticImports) {
-        codeWriter.emit("import static $L;\n", signature);
-      }
-      codeWriter.emit("\n");
-    }
+		if (!fileComment.isEmpty()) {
+			codeWriter.emitComment(fileComment);
+		}
 
-    int importedTypesCount = 0;
-    for (ClassName className : new TreeSet<>(codeWriter.importedTypes().values())) {
-      if (skipJavaLangImports && className.packageName().equals("java.lang")) continue;
-      codeWriter.emit("import $L;\n", className.withoutAnnotations());
-      importedTypesCount++;
-    }
+		if (!packageName.isEmpty()) {
+			codeWriter.emit("package $L;\n", packageName);
+			codeWriter.emit("\n");
+		}
 
-    if (importedTypesCount > 0) {
-      codeWriter.emit("\n");
-    }
+		if (!staticImports.isEmpty()) {
+			for (String signature : staticImports) {
+				codeWriter.emit("import static $L;\n", signature);
+			}
+			codeWriter.emit("\n");
+		}
 
-    if (!imports.isEmpty()) {
-      for (String signature : imports) {
-        codeWriter.emit("import $L;\n", signature);
-      }
-      codeWriter.emit("\n");
-    }
+		int importedTypesCount = 0;
+		for (ClassName className : new TreeSet<>(codeWriter.importedTypes().values())) {
+			if (skipJavaLangImports && className.packageName().equals("java.lang")) {
+				continue;
+			}
+			codeWriter.emit("import $L;\n", className.withoutAnnotations());
+			importedTypesCount++;
+		}
 
+		if (importedTypesCount > 0) {
+			codeWriter.emit("\n");
+		}
 
-    typeSpec.emit(codeWriter, null, Collections.emptySet());
+		if (!imports.isEmpty()) {
+			for (String signature : imports) {
+				codeWriter.emit("import $L;\n", signature);
+			}
+			codeWriter.emit("\n");
+		}
 
-    codeWriter.popPackage();
-  }
+		typeSpec.emit(codeWriter, null, Collections.emptySet());
 
-  @Override public boolean equals(Object o) {
-    if (this == o) return true;
-    if (o == null) return false;
-    if (getClass() != o.getClass()) return false;
-    return toString().equals(o.toString());
-  }
+		codeWriter.popPackage();
+	}
 
-  @Override public int hashCode() {
-    return toString().hashCode();
-  }
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) {
+			return true;
+		}
+		if (o == null) {
+			return false;
+		}
+		if (getClass() != o.getClass()) {
+			return false;
+		}
+		return toString().equals(o.toString());
+	}
 
-  @Override public String toString() {
-    try {
-      StringBuilder result = new StringBuilder();
-      writeTo(result);
-      return result.toString();
-    } catch (IOException e) {
-      throw new AssertionError();
-    }
-  }
+	@Override
+	public int hashCode() {
+		return toString().hashCode();
+	}
 
-  public JavaFileObject toJavaFileObject() {
-    URI uri = URI.create((packageName.isEmpty()
-        ? typeSpec.name
-        : packageName.replace('.', '/') + '/' + typeSpec.name)
-        + Kind.SOURCE.extension);
-    return new SimpleJavaFileObject(uri, Kind.SOURCE) {
-      private final long lastModified = System.currentTimeMillis();
-      @Override public String getCharContent(boolean ignoreEncodingErrors) {
-        return JavaFile.this.toString();
-      }
-      @Override public InputStream openInputStream() throws IOException {
-        return new ByteArrayInputStream(getCharContent(true).getBytes(UTF_8));
-      }
-      @Override public long getLastModified() {
-        return lastModified;
-      }
-    };
-  }
+	@Override
+	public String toString() {
+		try {
+			StringBuilder result = new StringBuilder();
+			writeTo(result);
+			return result.toString();
+		} catch (IOException e) {
+			throw new AssertionError();
+		}
+	}
 
-  public static Builder builder(String packageName, TypeSpec typeSpec) {
-    checkNotNull(packageName, "packageName == null");
-    checkNotNull(typeSpec, "typeSpec == null");
-    return new Builder(packageName, typeSpec);
-  }
+	public JavaFileObject toJavaFileObject() {
+		URI uri = URI.create((packageName.isEmpty() ? typeSpec.name : packageName.replace('.', '/') + '/' + typeSpec.name) + Kind.SOURCE.extension);
+		return new SimpleJavaFileObject(uri, Kind.SOURCE) {
+			private final long lastModified = System.currentTimeMillis();
 
-  public Builder toBuilder() {
-    Builder builder = new Builder(packageName, typeSpec);
-    builder.fileComment.add(fileComment);
-    builder.skipJavaLangImports = skipJavaLangImports;
-    builder.indent = indent;
-    return builder;
-  }
+			@Override
+			public String getCharContent(boolean ignoreEncodingErrors) {
+				return JavaFile.this.toString();
+			}
 
-  public static final class Builder {
-    private final String packageName;
-    private final TypeSpec typeSpec;
-    private final CodeBlock.Builder fileComment = CodeBlock.builder();
-    private final Set<String> staticImports = new TreeSet<>();
-    private final Set<String> imports = new TreeSet<>();
-    private boolean skipJavaLangImports;
-    private String indent = "  ";
+			@Override
+			public InputStream openInputStream() throws IOException {
+				return new ByteArrayInputStream(getCharContent(true).getBytes(UTF_8));
+			}
 
-    private Builder(String packageName, TypeSpec typeSpec) {
-      this.packageName = packageName;
-      this.typeSpec = typeSpec;
-    }
+			@Override
+			public long getLastModified() {
+				return lastModified;
+			}
+		};
+	}
 
-    public Builder addFileComment(String format, Object... args) {
-      this.fileComment.add(format, args);
-      return this;
-    }
+	public static Builder builder(String packageName, TypeSpec typeSpec) {
+		checkNotNull(packageName, "packageName == null");
+		checkNotNull(typeSpec, "typeSpec == null");
+		return new Builder(packageName, typeSpec);
+	}
 
-    public Builder addStaticImport(Enum<?> constant) {
-      return addStaticImport(ClassName.get(constant.getDeclaringClass()), constant.name());
-    }
+	public Builder toBuilder() {
+		Builder builder = new Builder(packageName, typeSpec);
+		builder.fileComment.add(fileComment);
+		builder.skipJavaLangImports = skipJavaLangImports;
+		builder.indent = indent;
+		return builder;
+	}
 
+	public static final class Builder {
+		private final String packageName;
+		private final TypeSpec typeSpec;
+		private final CodeBlock.Builder fileComment = CodeBlock.builder();
+		private final Set<String> staticImports = new TreeSet<>();
+		private final Set<String> imports = new TreeSet<>();
+		private boolean skipJavaLangImports;
+		private String indent = "  ";
 
-    /**
-     * The square team doesn't provide an import method,
-     * but the existing $T, $N tags for CodeBlocks can become very complex in generating this code,
-     *
-     *  LinearLayout.LayoutParams layoutParam1 = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT
-     *  ,(int)(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP,150,res.getDisplayMetrics())));
-     *
-     *
-     *  So we can only add it based on the open source version
-     * @param imports
-     * @return
-     */
-    public Builder addImports(TreeSet<String> imports) {
-      if (imports != null) {
-        this.imports.addAll(imports);
-      }
-      return this;
-    }
+		private Builder(String packageName, TypeSpec typeSpec) {
+			this.packageName = packageName;
+			this.typeSpec = typeSpec;
+		}
 
-    public Builder addStaticImport(Class<?> clazz, String... names) {
-      return addStaticImport(ClassName.get(clazz), names);
-    }
+		public Builder addFileComment(String format, Object... args) {
+			this.fileComment.add(format, args);
+			return this;
+		}
 
-    public Builder addStaticImport(ClassName className, String... names) {
-      checkArgument(className != null, "className == null");
-      checkArgument(names != null, "names == null");
-      checkArgument(names.length > 0, "names array is empty");
-      for (String name : names) {
-        checkArgument(name != null, "null entry in names array: %s", Arrays.toString(names));
-        staticImports.add(className.canonicalName + "." + name);
-      }
-      return this;
-    }
+		public Builder addStaticImport(Enum<?> constant) {
+			return addStaticImport(ClassName.get(constant.getDeclaringClass()), constant.name());
+		}
 
-    /**
-     * Call this to omit imports for classes in {@code java.lang}, such as {@code java.lang.String}.
-     *
-     * <p>By default, JavaPoet explicitly imports types in {@code java.lang} to defend against
-     * naming conflicts. Suppose an (ill-advised) class is named {@code com.example.String}. When
-     * {@code java.lang} imports are skipped, generated code in {@code com.example} that references
-     * {@code java.lang.String} will get {@code com.example.String} instead.
-     */
-    public Builder skipJavaLangImports(boolean skipJavaLangImports) {
-      this.skipJavaLangImports = skipJavaLangImports;
-      return this;
-    }
+		/**
+		 * The square team doesn't provide an import method, but the existing $T, $N
+		 * tags for CodeBlocks can become very complex in generating this code,
+		 *
+		 * LinearLayout.LayoutParams layoutParam1 = new
+		 * LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT
+		 * ,(int)(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP,150,res.getDisplayMetrics())));
+		 *
+		 *
+		 * So we can only add it based on the open source version
+		 * 
+		 * @param imports
+		 * @return
+		 */
+		public Builder addImports(Set<String> imports) {
+			if (imports != null) {
+				this.imports.addAll(imports);
+			}
+			return this;
+		}
 
-    public Builder indent(String indent) {
-      this.indent = indent;
-      return this;
-    }
+		public Builder addStaticImport(Class<?> clazz, String... names) {
+			return addStaticImport(ClassName.get(clazz), names);
+		}
 
-    public JavaFile build() {
-      return new JavaFile(this);
-    }
-  }
+		public Builder addStaticImport(ClassName className, String... names) {
+			checkArgument(className != null, "className == null");
+			checkArgument(names != null, "names == null");
+			checkArgument(names.length > 0, "names array is empty");
+			for (String name : names) {
+				checkArgument(name != null, "null entry in names array: %s", Arrays.toString(names));
+				staticImports.add(className.canonicalName + "." + name);
+			}
+			return this;
+		}
+
+		/**
+		 * Call this to omit imports for classes in {@code java.lang}, such as
+		 * {@code java.lang.String}.
+		 *
+		 * <p>
+		 * By default, JavaPoet explicitly imports types in {@code java.lang} to defend
+		 * against naming conflicts. Suppose an (ill-advised) class is named
+		 * {@code com.example.String}. When {@code java.lang} imports are skipped,
+		 * generated code in {@code com.example} that references
+		 * {@code java.lang.String} will get {@code com.example.String} instead.
+		 */
+		public Builder skipJavaLangImports(boolean skipJavaLangImports) {
+			this.skipJavaLangImports = skipJavaLangImports;
+			return this;
+		}
+
+		public Builder indent(String indent) {
+			this.indent = indent;
+			return this;
+		}
+
+		public JavaFile build() {
+			return new JavaFile(this);
+		}
+	}
 }

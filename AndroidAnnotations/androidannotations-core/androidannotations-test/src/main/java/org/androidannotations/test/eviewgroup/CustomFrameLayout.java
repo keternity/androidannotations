@@ -50,7 +50,7 @@ public class CustomFrameLayout extends FrameLayout {
 	@AnimationRes(R.anim.fadein)
 	protected Animation anim;
 
-	public CustomFrameLayout(Context context, int i) {
+	public CustomFrameLayout(Context context) {
 		super(context);
 	}
 
