@@ -61,7 +61,7 @@ import org.androidannotations.api.KotlinOpen;
  * 	&#064;AfterViews
  * 	void initViews() {
  * 		titleView.setText(&quot;test&quot;);
- *    }
+ * 	}
  * }
  * </pre>
  *
@@ -72,32 +72,32 @@ import org.androidannotations.api.KotlinOpen;
  * @see ViewById
  * @see android.view.View
  * @see <a href=
- * "http://developer.android.com/guide/topics/ui/custom-components.html"
- * >How to build a custom component.</a>
+ *      "http://developer.android.com/guide/topics/ui/custom-components.html"
+ *      >How to build a custom component.</a>
  */
 @Retention(RetentionPolicy.CLASS)
 @Target(ElementType.TYPE)
 @KotlinOpen
 public @interface EViewGroup {
 
-    /**
-     * The R.layout.* field which refer to the layout.
-     *
-     * @return the id of the layout
-     */
-    int value() default ResId.DEFAULT_VALUE;
+	/**
+	 * The R.layout.* field which refer to the layout.
+	 *
+	 * @return the id of the layout
+	 */
+	int value() default ResId.DEFAULT_VALUE;
 
-    /**
-     * The resource name as a string which refer to the layout.
-     *
-     * @return the resource name of the layout
-     */
-    String resName() default "";
+	/**
+	 * The resource name as a string which refer to the layout.
+	 *
+	 * @return the resource name of the layout
+	 */
+	String resName() default "";
 
-    /**
-     * Use X2C
-     *
-     * @return use X2C or not
-     */
-    boolean useX2C() default false;
+	/**
+	 * Use X2C.
+	 *
+	 * @return use X2C or not
+	 */
+	boolean useX2C() default false;
 }
