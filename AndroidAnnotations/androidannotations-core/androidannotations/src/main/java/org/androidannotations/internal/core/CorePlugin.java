@@ -76,6 +76,7 @@ import org.androidannotations.internal.core.handler.KeyUpHandler;
 import org.androidannotations.internal.core.handler.LongClickHandler;
 import org.androidannotations.internal.core.handler.NonConfigurationInstanceHandler;
 import org.androidannotations.internal.core.handler.OnActivityResultHandler;
+import org.androidannotations.internal.core.handler.OnFragmentResultHandler;
 import org.androidannotations.internal.core.handler.OptionsItemHandler;
 import org.androidannotations.internal.core.handler.OptionsMenuHandler;
 import org.androidannotations.internal.core.handler.OptionsMenuItemHandler;
@@ -208,6 +209,7 @@ public class CorePlugin extends AndroidAnnotationsPlugin {
 		annotationHandlers.add(new ReceiverHandler(androidAnnotationEnv));
 		annotationHandlers.add(new ReceiverActionHandler(androidAnnotationEnv));
 		annotationHandlers.add(new OnActivityResultHandler(androidAnnotationEnv));
+		annotationHandlers.add(new OnFragmentResultHandler(androidAnnotationEnv));
 		annotationHandlers.add(new PageScrolledHandler(androidAnnotationEnv));
 		annotationHandlers.add(new PageScrollStateChangedHandler(androidAnnotationEnv));
 		annotationHandlers.add(new PageSelectedHandler(androidAnnotationEnv));
